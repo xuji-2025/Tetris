@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tetris-core/schema/v1.json",
+  "title": "TetrisCore Protocol v1",
+  "description": "Structured state and action protocol for TetrisCore engine",
+  "definitions": {
+    "PieceType": {
+      "type": "string",
+      "enum": ["I", "O", "T", "S", "Z", "J", "L"]
+    },
+    "Board": {
+      "type": "object",
+      "properties": {
+        "w": { "type": "integer", "const": 10 },
+        "h": { "type": "integer", "const": 20 },
+        "cells": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 7 },
+          "minItems": 200,
+          "maxItems": 200
+        },
+        "row_heights": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 10,
+          "maxItems": 10
+        },
+        "holes_per_col": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 10,
+          "maxItems": 10
+        }
+      },
+      "required": ["w", "h", "cells", "row_heights", "holes_per_col"]
+    },
+    "CurrentPiece": {
+      "type": "object",
+      "properties": {
+        "type": { "$ref": "#/definitions/PieceType" },
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "rot": { "type": "integer", "minimum": 0, "maximum": 3 }
+      },
+      "required": ["type", "x", "y", "rot"]
+    },
+    "HoldInfo": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "oneOf": [
+            { "$ref": "#/definitions/PieceType" },
+            { "type": "null" }
+          ]
+        },
+        "used": { "type": "boolean" }
+      },
+      "required": ["type", "used"]
+    },
+    "Features": {
+      "type": "object",
+      "properties": {
+        "agg_height": { "type": "integer" },
+        "bumpiness": { "type": "integer" },
+        "well_max": { "type": "integer" },
+        "holes": { "type": "integer" },
+        "row_trans": { "type": "integer" },
+        "col_trans": { "type": "integer" }
+      },
+      "required": ["agg_height", "bumpiness", "well_max", "holes", "row_trans", "col_trans"]
+    },
+    "Episode": {
+      "type": "object",
+      "properties": {
+        "score": { "type": "integer" },
+        "lines_total": { "type": "integer" },
+        "top_out": { "type": "boolean" },
+        "seed": { "type": "integer" }
+      },
+      "required": ["score", "lines_total", "top_out", "seed"]
+    },
+    "LegalMove": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "integer" },
+        "rot": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "use_hold": { "type": "boolean" },
+        "harddrop_y": { "type": "integer" }
+      },
+      "required": ["x", "rot", "use_hold", "harddrop_y"]
+    },
+    "Config": {
+      "type": "object",
+      "properties": {
+        "srs": { "type": "boolean" },
+        "hold": { "type": "boolean" },
+        "gravity": { "type": "string", "enum": ["step"] }
+      },
+      "required": ["srs", "hold", "gravity"]
+    },
+    "Observation": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "string", "const": "s1.0.0" },
+        "tick": { "type": "integer" },
+        "board": { "$ref": "#/definitions/Board" },
+        "current": { "$ref": "#/definitions/CurrentPiece" },
+        "next_queue": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PieceType" }
+        },
+        "hold": { "$ref": "#/definitions/HoldInfo" },
+        "features": { "$ref": "#/definitions/Features" },
+        "episode": { "$ref": "#/definitions/Episode" },
+        "legal_moves": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/LegalMove" }
+        },
+        "config": { "$ref": "#/definitions/Config" }
+      },
+      "required": [
+        "schema_version", "tick", "board", "current", "next_queue",
+        "hold", "features", "episode", "legal_moves", "config"
+      ]
+    },
+    "FrameAction": {
+      "type": "string",
+      "enum": ["LEFT", "RIGHT", "CW", "CCW", "SOFT", "HARD", "HOLD", "NOOP"]
+    },
+    "PlacementAction": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "integer" },
+        "rot": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "use_hold": { "type": "boolean" }
+      },
+      "required": ["x", "rot", "use_hold"]
+    }
+  }
+}

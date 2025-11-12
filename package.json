@@ -1,0 +1,21 @@
+{
+  "name": "tetris-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TetrisCore + Web Frontend - AI-Ready Tetris Implementation",
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "gen-types": "./scripts/gen-types.sh",
+    "web": "pnpm --filter web dev",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,json}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
