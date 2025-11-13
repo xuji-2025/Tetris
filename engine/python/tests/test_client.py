@@ -6,11 +6,21 @@ Usage:
 
 import asyncio
 import json
+import os
+
+import pytest
 import websockets
 
 
+RUN_WS_TESTS = os.getenv("RUN_WS_TESTS") == "1"
+
+
+@pytest.mark.asyncio
 async def test_game_session():
     """Test a complete game session."""
+    if not RUN_WS_TESTS:
+        pytest.skip("WebSocket integration test requires RUN_WS_TESTS=1 and backend server.")
+
     uri = "ws://localhost:8000/ws"
 
     print("Connecting to WebSocket server...")
@@ -72,8 +82,12 @@ async def test_game_session():
         print("\n✓ All tests passed!")
 
 
+@pytest.mark.asyncio
 async def test_multiple_games():
     """Test playing multiple short games."""
+    if not RUN_WS_TESTS:
+        pytest.skip("WebSocket integration test requires RUN_WS_TESTS=1 and backend server.")
+
     uri = "ws://localhost:8000/ws"
 
     print("Testing multiple games...")
