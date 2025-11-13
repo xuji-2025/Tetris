@@ -289,6 +289,117 @@ class TetrisEnv:
 
         return StepResult(obs, 0.0, self.done, info)
 
+    def step_placement(self, action: PlacementAction) -> StepResult:
+        """Execute a placement action (AI interface).
+
+        This is a higher-level interface for RL agents. Instead of frame-by-frame
+        control, the agent specifies the final placement (x, rot, use_hold) and
+        the environment executes the necessary sequence of moves internally.
+
+        Args:
+            action: Placement action specifying target position and hold usage
+
+        Returns:
+            Step result with observation, reward, done, info
+        """
+        if self.done:
+            return StepResult(self._build_observation(), 0.0, True, {"error": "Game over"})
+
+        # Validate action is legal
+        legal_moves = self.compute_legal_moves()
+        target_move = next(
+            (m for m in legal_moves if m.x == action.x and m.rot == action.rot and m.use_hold == action.use_hold),
+            None
+        )
+
+        if target_move is None:
+            # Invalid action - return current state with penalty
+            return StepResult(
+                self._build_observation(),
+                -100.0,
+                False,
+                {"error": f"Invalid placement action: {action}"}
+            )
+
+        events = []
+        lines_cleared = 0
+        old_features = self.last_features.copy()
+
+        # Execute hold if needed
+        if action.use_hold:
+            if not self._try_hold():
+                # Hold failed (already used this turn)
+                return StepResult(
+                    self._build_observation(),
+                    -100.0,
+                    False,
+                    {"error": "Cannot hold - already used this turn"}
+                )
+            events.append("hold")
+
+        # Rotate to target rotation
+        target_piece_type = self.current_piece.type
+        current_rot = self.current_piece.rot
+        target_rot = action.rot
+
+        # Calculate shortest rotation path
+        rot_diff = (target_rot - current_rot) % 4
+        for _ in range(rot_diff):
+            if not self._try_rotate(clockwise=True):
+                # Rotation failed - shouldn't happen if action was legal
+                return StepResult(
+                    self._build_observation(),
+                    -100.0,
+                    False,
+                    {"error": f"Failed to rotate to target rotation {target_rot}"}
+                )
+
+        # Move to target x position
+        target_x = action.x
+        current_x = self.current_piece.x
+        dx = target_x - current_x
+
+        if dx != 0:
+            direction = 1 if dx > 0 else -1
+            for _ in range(abs(dx)):
+                if not self._try_move(direction, 0):
+                    # Movement failed - shouldn't happen if action was legal
+                    return StepResult(
+                        self._build_observation(),
+                        -100.0,
+                        False,
+                        {"error": f"Failed to move to target x position {target_x}"}
+                    )
+
+        # Hard drop
+        lines_from_drop, spawned = self._hard_drop()
+        events.append("hard_drop")
+        if lines_from_drop > 0:
+            lines_cleared = lines_from_drop
+            events.append("clear")
+        if spawned:
+            events.append("spawn")
+
+        # Compute features and deltas
+        new_features = compute_features(self.board)
+        feature_deltas = compute_feature_deltas(old_features, new_features)
+        self.last_features = new_features
+
+        obs = self._build_observation()
+        info = {
+            "lines_cleared": lines_cleared,
+            "delta": feature_deltas,
+            "events": events,
+        }
+
+        # Compute reward (can be customized by reward shaper later)
+        reward = float(lines_cleared * 100)  # Simple: 100 points per line
+        if self.done:
+            reward -= 500  # Penalty for game over
+            events.append("top_out")
+
+        return StepResult(obs, reward, self.done, info)
+
     def _spawn_piece(self) -> None:
         """Spawn the next piece."""
         next_type = self.rng.next()

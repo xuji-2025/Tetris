@@ -22,8 +22,16 @@ A dual-purpose Tetris implementation designed for both human play and AI trainin
 - **WebSocket server**: JSON-based protocol (FastAPI + uvicorn)
 - **Versioned schema**: Protocol v1.0.0 defined in `proto/schema/v1.json`
 - **Gym-like interface**: `reset(seed)` and `step(action)` methods
-- **Frame actions**: LEFT, RIGHT, CW, CCW, SOFT, HARD, HOLD, NOOP
+- **Frame actions**: LEFT, RIGHT, CW, CCW, SOFT, HARD, HOLD, NOOP (for humans)
+- **Placement actions**: Direct piece placement (for AI agents)
 - **Rich observations**: Full game state with features and legal moves
+
+### AI Agents
+- **Agent framework**: Base class with `select_action()` interface
+- **Built-in agents**: Random (baseline), Dellacherie (strong heuristic)
+- **Runner system**: Execute episodes, benchmarks, and agent comparisons
+- **Placement actions**: AI focuses on strategy, not motor control
+- **Statistics tracking**: Lines, score, pieces, duration per episode
 
 ## Quick Start
 
@@ -76,6 +84,68 @@ uv run python tests/test_client.py interactive  # Interactive mode
 - **Z/X**: Rotate counter-clockwise/clockwise
 - **Shift/C**: Hold current piece
 
+## AI Agents
+
+### Quick Demo
+
+```bash
+cd engine/python
+
+# Watch agents play
+python demo_agents.py              # Single episodes (Random + Dellacherie)
+python demo_agents.py compare      # Compare agents (5 episodes, 100 pieces each)
+python demo_agents.py benchmark    # Benchmark Dellacherie (10 episodes, 500 pieces each)
+```
+
+### Programmatic Usage
+
+```python
+from tetris_core.agents import RandomAgent, DellacherieAgent
+from tetris_core.runner import Runner
+
+# Create agents
+random_agent = RandomAgent(seed=42)
+dellacherie_agent = DellacherieAgent()
+
+# Create runner
+runner = Runner(verbose=True)
+
+# Run single episode
+stats = runner.run_episode(dellacherie_agent, seed=42, max_pieces=100)
+print(f"Score: {stats.score}, Lines: {stats.lines_cleared}")
+
+# Compare agents
+runner.compare_agents(
+    agents=[random_agent, dellacherie_agent],
+    num_episodes=5,
+    max_pieces=100
+)
+```
+
+### Creating Custom Agents
+
+```python
+from tetris_core.agent import Agent
+from tetris_core.env import Observation, PlacementAction
+
+class MyAgent(Agent):
+    def __init__(self):
+        super().__init__(name="MyAgent")
+
+    def select_action(self, obs: Observation) -> PlacementAction:
+        # Your strategy here - select from obs.legal_moves
+        move = obs.legal_moves[0]  # Example: pick first move
+        return PlacementAction(x=move.x, rot=move.rot, use_hold=move.use_hold)
+```
+
+### Built-in Agents
+
+**RandomAgent**: Selects random legal moves (baseline, ~20 pieces before game over)
+
+**DellacherieAgent**: Classic heuristic agent using handcrafted features (30+ lines per 100 pieces)
+- Features: landing height, eroded cells, row/column transitions, holes, wells
+- Based on Thiery & Scherrer (2009)
+
 ## Project Structure
 
 ```
@@ -89,16 +159,22 @@ tetris/
 │   └── vite.config.ts
 ├── engine/python/         # Core game engine
 │   ├── tetris_core/       # Game logic
-│   │   ├── env.py         # Main game environment
+│   │   ├── env.py         # Main game environment (frame + placement actions)
 │   │   ├── board.py       # 10×20 grid, collision, line clearing
 │   │   ├── piece.py       # Tetromino shapes (all 4 rotations)
 │   │   ├── rng.py         # Deterministic 7-bag randomizer
 │   │   ├── rules.py       # SRS wall kicks, lock delay, scoring
-│   │   └── features.py    # Engineered metrics for RL
+│   │   ├── features.py    # Engineered metrics for RL
+│   │   ├── agent.py       # Base class for AI agents
+│   │   ├── runner.py      # Agent execution and benchmarking
+│   │   └── agents/        # Built-in AI agents
+│   │       ├── random_agent.py      # Random baseline
+│   │       └── dellacherie.py       # Heuristic agent
 │   ├── api/               # WebSocket server
 │   │   ├── server.py      # FastAPI WebSocket endpoint
 │   │   └── protocol.py    # Protocol dataclasses
-│   ├── tests/             # Unit tests (24/24 passing)
+│   ├── tests/             # Unit tests (39 tests passing)
+│   ├── demo_agents.py     # AI agent demo script
 │   └── pyproject.toml     # uv configuration
 ├── proto/schema/          # Protocol definitions
 │   └── v1.json            # JSON Schema for observations/actions

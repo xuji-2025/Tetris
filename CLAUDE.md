@@ -31,6 +31,7 @@ cd engine/python && uv run pytest tests/ -v
 
 # Run specific test file
 uv run pytest tests/test_env.py -v
+uv run pytest tests/test_agent.py -v  # AI agent tests
 
 # Run single test
 uv run pytest tests/test_env.py::test_env_reset -v
@@ -39,6 +40,11 @@ uv run pytest tests/test_env.py::test_env_reset -v
 uv run python tests/test_client.py           # Basic test
 uv run python tests/test_client.py multiple  # Multiple games
 uv run python tests/test_client.py interactive  # Interactive mode
+
+# Run AI agents demo
+uv run python demo_agents.py              # Quick demo
+uv run python demo_agents.py compare      # Compare Random vs Dellacherie
+uv run python demo_agents.py benchmark    # Benchmark Dellacherie
 ```
 
 ### Code Quality
@@ -103,12 +109,16 @@ TetrisEnv (env.py)
 
 **Frame Actions** (human):
 - `LEFT`, `RIGHT`, `CW`, `CCW`, `SOFT`, `HARD`, `HOLD`, `NOOP`
-- One action per tick
+- One action per tick via `env.step(FrameAction)`
 - Gravity and lock delay apply automatically
+- Used by human players and full-control RL
 
-**Placement Actions** (AI, future):
-- `{x, rot, use_hold}` - directly specify final placement
-- Not yet implemented in `env.step()`, but legal moves are pre-computed
+**Placement Actions** (AI):
+- `{x, rot, use_hold}` - directly specify final placement via `env.step_placement(PlacementAction)`
+- Engine executes optimal action sequence internally (hold → rotate → move → hard drop)
+- Returns same observation format as frame-based `step()`
+- Eliminates credit assignment problem for RL
+- **Key advantage**: Agent focuses on strategy (which position?) rather than motor control (how to get there?)
 
 ### Observation Schema
 
@@ -162,9 +172,136 @@ All observations follow `proto/schema/v1.json` (version `s1.0.0`). Key fields:
 
 **tetris_core/env.py**:
 - Main game loop: `reset(seed)` → `step(action)` → `{obs, reward, done, info}`
+- Two interfaces: `step(FrameAction)` for humans, `step_placement(PlacementAction)` for AI
 - `info.delta`: Feature deltas (for reward shaping in RL)
 - `info.events`: `["lock", "clear", "spawn", "hard_drop", "top_out"]`
 - **No baked reward function**: Engine only exposes raw state changes
+
+**tetris_core/agent.py**:
+- Base class for all AI agents (heuristic, RL, MCTS)
+- Abstract method: `select_action(obs) → PlacementAction`
+- Lifecycle hooks: `on_episode_start()`, `on_step_result()`, `on_episode_end()`
+- Built-in statistics tracking
+
+**tetris_core/runner.py**:
+- Framework for executing agents and collecting statistics
+- `run_episode(agent, seed)`: Single episode execution
+- `run_benchmark(agent, num_episodes)`: Multi-episode evaluation
+- `compare_agents(agents, num_episodes)`: Head-to-head comparison
+
+## AI Agents
+
+### Agent Interface
+
+All agents inherit from `Agent` base class and implement `select_action()`:
+
+```python
+from tetris_core.agent import Agent
+from tetris_core.env import Observation, PlacementAction
+
+class MyAgent(Agent):
+    def select_action(self, obs: Observation) -> PlacementAction:
+        # Select from obs.legal_moves
+        move = obs.legal_moves[0]
+        return PlacementAction(x=move.x, rot=move.rot, use_hold=move.use_hold)
+```
+
+### Built-in Agents
+
+**RandomAgent** (`tetris_core/agents/random_agent.py`):
+- Selects legal moves uniformly at random
+- Baseline for comparison (any serious agent should beat this)
+- Typically tops out in ~20 pieces
+
+**DellacherieAgent** (`tetris_core/agents/dellacherie.py`):
+- Classic heuristic agent using handcrafted features
+- Features: landing height, eroded cells, row/col transitions, holes, wells
+- Optimized weights from Thiery & Scherrer (2009)
+- Strong baseline: clears 30+ lines per 100 pieces consistently
+- Deterministic (same seed → same play)
+
+### Running Agents
+
+**Quick demo**:
+```bash
+cd engine/python
+uv run python demo_agents.py              # Single episodes
+uv run python demo_agents.py compare      # Compare Random vs Dellacherie
+uv run python demo_agents.py benchmark    # Benchmark Dellacherie
+```
+
+**Programmatic usage**:
+```python
+from tetris_core.agents import RandomAgent, DellacherieAgent
+from tetris_core.runner import Runner
+
+# Create agents
+random_agent = RandomAgent(seed=42)
+dellacherie_agent = DellacherieAgent()
+
+# Create runner
+runner = Runner(verbose=True)
+
+# Run single episode
+stats = runner.run_episode(dellacherie_agent, seed=42, max_pieces=100)
+print(f"Score: {stats.score}, Lines: {stats.lines_cleared}")
+
+# Run benchmark
+results = runner.run_benchmark(dellacherie_agent, num_episodes=10)
+summary = results.get_summary()
+print(f"Avg lines: {summary['avg_lines']:.1f}")
+
+# Compare agents
+runner.compare_agents(
+    agents=[random_agent, dellacherie_agent],
+    num_episodes=5,
+    max_pieces=100
+)
+```
+
+### Creating Custom Agents
+
+**Example: Greedy Height-Minimizing Agent**:
+```python
+from tetris_core.agent import Agent
+from tetris_core.env import Observation, PlacementAction
+
+class GreedyAgent(Agent):
+    def __init__(self):
+        super().__init__(name="Greedy-Height")
+
+    def select_action(self, obs: Observation) -> PlacementAction:
+        best_score = float('inf')
+        best_move = obs.legal_moves[0]
+
+        for move in obs.legal_moves:
+            # Simple heuristic: minimize max height
+            # (You'd normally simulate the placement to get resulting board)
+            score = move.harddrop_y  # Lower y = higher on board = worse
+
+            if score < best_score:
+                best_score = score
+                best_move = move
+
+        return PlacementAction(
+            x=best_move.x,
+            rot=best_move.rot,
+            use_hold=best_move.use_hold
+        )
+```
+
+### Testing Agents
+
+All agent tests in `tests/test_agent.py` (15 tests):
+```bash
+uv run pytest tests/test_agent.py -v
+```
+
+Tests cover:
+- Placement action execution (valid/invalid actions, hold, line clear, game over)
+- Agent behavior (legal move selection, callbacks, statistics)
+- Runner framework (single episode, benchmark, comparison)
+- Performance (Dellacherie >> Random)
 
 ## Protocol & Future Rust Port
 
