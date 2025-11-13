@@ -1,6 +1,7 @@
 """Tests for game environment."""
 
 from tetris_core.env import TetrisEnv, FrameAction
+from tetris_core.piece import Piece
 
 
 def test_env_reset():
@@ -67,7 +68,7 @@ def test_env_legal_moves():
 
     # Check move format
     for move in legal_moves:
-        assert 0 <= move.x < 10, "Move x should be in bounds"
+        assert -4 <= move.x <= env.board.WIDTH, "Move x should be within extended bounds"
         assert 0 <= move.rot <= 3, "Move rotation should be 0-3"
         assert isinstance(move.use_hold, bool), "use_hold should be boolean"
 
@@ -105,3 +106,18 @@ def test_env_line_clearing():
 
     # Score should update (tested via step logic in real game)
     assert env.board.get_column_heights()[0] < env.board.HEIGHT, "Lines should be cleared"
+
+
+def test_legal_moves_include_wall_placements():
+    """Ensure legal moves cover placements that start outside the visible board."""
+    env = TetrisEnv()
+    env.reset(seed=321)
+
+    env.current_piece = Piece("O", x=-1, y=1, rot=0)
+    env.hold_piece = None
+    env.hold_used_this_turn = False
+
+    moves = env.compute_legal_moves()
+    assert any(
+        move.x == -1 and move.rot == 0 and not move.use_hold for move in moves
+    ), "Expected legal move for O piece flush against left wall"

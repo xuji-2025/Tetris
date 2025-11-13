@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
 
 from tetris_core.board import Board
-from tetris_core.piece import Piece, get_spawn_position
+from tetris_core.piece import Piece, get_spawn_position, PIECE_SHAPES
 from tetris_core.rng import SevenBagRNG
 from tetris_core.rules import SRSRules, LockDelay, calculate_score
 from tetris_core.features import compute_features, compute_feature_deltas
@@ -517,7 +517,14 @@ class TetrisEnv:
             use_hold = piece_type != self.current_piece.type
 
             for rot in range(4):
-                for x in range(self.board.WIDTH):
+                shape = PIECE_SHAPES[piece_type][rot]
+                min_dx = min(dx for dx, _ in shape)
+                max_dx = max(dx for dx, _ in shape)
+
+                min_x = -min_dx
+                max_x = self.board.WIDTH - 1 - max_dx
+
+                for x in range(min_x, max_x + 1):
                     # Start at top of board and drop down
                     test_piece = Piece(piece_type, x, 0, rot)
 
