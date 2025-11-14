@@ -1,6 +1,6 @@
 """Tetris board with collision detection and line clearing."""
 
-from typing import List, Tuple
+from typing import List
 from tetris_core.piece import Piece
 
 

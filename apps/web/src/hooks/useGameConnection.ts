@@ -138,7 +138,7 @@ export function useGameConnection({
   }, [])
 
   // Start AI play
-  const aiPlay = useCallback((agentType: 'random' | 'dellacherie', speed: number = 1.0, seed?: number) => {
+  const aiPlay = useCallback((agentType: 'random' | 'dellacherie' | 'smartdellacherie', speed: number = 1.0, seed?: number) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(
         JSON.stringify({

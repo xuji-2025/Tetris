@@ -121,7 +121,7 @@ function App() {
     aiStop()
   }, [aiStop, setAIPlaying])
 
-  const handleAgentChange = useCallback((newAgent: 'random' | 'dellacherie') => {
+  const handleAgentChange = useCallback((newAgent: 'random' | 'dellacherie' | 'smartdellacherie') => {
     setSelectedAgent(newAgent)
     // If AI is playing, restart with new agent
     if (isAIPlaying) {
@@ -208,9 +208,10 @@ function App() {
                 Agent:
                 <select
                   value={selectedAgent}
-                  onChange={(e) => handleAgentChange(e.target.value as 'random' | 'dellacherie')}
+                  onChange={(e) => handleAgentChange(e.target.value as 'random' | 'dellacherie' | 'smartdellacherie')}
                 >
                   <option value="dellacherie">Dellacherie</option>
+                  <option value="smartdellacherie">Smart Dellacherie</option>
                   <option value="random">Random</option>
                 </select>
               </label>
@@ -249,11 +250,12 @@ function App() {
                 Agent 1:
                 <select
                   value={comparisonAgent1}
-                  onChange={(e) => setComparisonAgent1(e.target.value as 'random' | 'dellacherie')}
+                  onChange={(e) => setComparisonAgent1(e.target.value as 'random' | 'dellacherie' | 'smartdellacherie')}
                   disabled={isComparing}
                 >
                   <option value="random">Random</option>
                   <option value="dellacherie">Dellacherie</option>
+                  <option value="smartdellacherie">Smart Dellacherie</option>
                 </select>
               </label>
 
@@ -261,11 +263,12 @@ function App() {
                 Agent 2:
                 <select
                   value={comparisonAgent2}
-                  onChange={(e) => setComparisonAgent2(e.target.value as 'random' | 'dellacherie')}
+                  onChange={(e) => setComparisonAgent2(e.target.value as 'random' | 'dellacherie' | 'smartdellacherie')}
                   disabled={isComparing}
                 >
                   <option value="random">Random</option>
                   <option value="dellacherie">Dellacherie</option>
+                  <option value="smartdellacherie">Smart Dellacherie</option>
                 </select>
               </label>
 

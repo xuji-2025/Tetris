@@ -2,7 +2,7 @@
 
 import pytest
 from tetris_core.env import TetrisEnv, PlacementAction
-from tetris_core.agents import RandomAgent, DellacherieAgent
+from tetris_core.agents import RandomAgent, DellacherieAgent, SmartDellacherieAgent
 from tetris_core.runner import Runner
 
 
@@ -260,6 +260,105 @@ class TestRunner:
         dellacherie_summary = results["Dellacherie"].get_summary()
 
         assert dellacherie_summary["avg_lines"] >= random_summary["avg_lines"]
+
+
+class TestSmartDellacherieAgent:
+    """Test SmartDellacherie agent."""
+
+    def test_smart_dellacherie_agent_plays(self):
+        """Test that SmartDellacherie agent can play."""
+        agent = SmartDellacherieAgent()
+        env = TetrisEnv()
+        obs = env.reset(seed=42)
+
+        for _ in range(50):
+            if obs.top_out:
+                break
+
+            action = agent.select_action(obs)
+
+            # Check action is legal
+            legal = any(
+                m.x == action.x and m.rot == action.rot and m.use_hold == action.use_hold
+                for m in obs.legal_moves
+            )
+            assert legal, f"Agent selected illegal action: {action}"
+
+            result = env.step_placement(action)
+            obs = result.obs
+
+    def test_smart_dellacherie_features(self):
+        """Test SmartDellacherie feature computation."""
+        agent = SmartDellacherieAgent()
+        env = TetrisEnv()
+        obs = env.reset(seed=42)
+
+        move = obs.legal_moves[0]
+        features = agent.compute_features(obs, move, i_piece_available=True)
+
+        # Check all features are present (original + new)
+        assert "landing_height" in features
+        assert "eroded_cells" in features
+        assert "row_transitions" in features
+        assert "col_transitions" in features
+        assert "holes" in features
+        assert "wells" in features
+        assert "tetris_ready" in features
+        assert "multi_line_potential" in features
+        assert "well_quality" in features
+        assert "i_piece_available" in features
+
+        # Check features are reasonable
+        assert features["landing_height"] >= 0
+        assert features["holes"] >= 0
+        assert features["wells"] >= 0
+        assert features["tetris_ready"] >= 0
+        assert features["multi_line_potential"] >= 0
+
+    def test_smart_dellacherie_efficiency(self):
+        """Test that SmartDellacherie achieves reasonable performance."""
+        agent = SmartDellacherieAgent()
+        runner = Runner(verbose=False)
+
+        # Run 3 episodes
+        stats_list = [
+            runner.run_episode(agent, seed=i, max_pieces=100) for i in range(3)
+        ]
+
+        # Check that it achieves reasonable performance
+        for stats in stats_list:
+            # Should clear at least some lines (basic sanity check)
+            # Weights may need tuning to achieve better efficiency
+            assert stats.lines_cleared > 5  # Should clear more than 5 lines in 100 pieces
+            assert stats.score > 0
+
+
+class TestAgentComparison:
+    """Test comparing different agents."""
+
+    def test_smart_vs_regular_dellacherie(self):
+        """Test SmartDellacherie vs regular Dellacherie."""
+        regular_agent = DellacherieAgent()
+        smart_agent = SmartDellacherieAgent()
+        runner = Runner(verbose=False)
+
+        # Run comparison
+        results = runner.compare_agents(
+            agents=[regular_agent, smart_agent],
+            num_episodes=3,
+            max_pieces=100,
+        )
+
+        assert len(results) == 2
+        assert "Dellacherie" in results
+        assert "SmartDellacherie" in results
+
+        regular_summary = results["Dellacherie"].get_summary()
+        smart_summary = results["SmartDellacherie"].get_summary()
+
+        # Both should perform reasonably well
+        assert regular_summary["avg_lines"] > 10
+        assert smart_summary["avg_lines"] > 10
 
 
 class TestAgentCallbacks:

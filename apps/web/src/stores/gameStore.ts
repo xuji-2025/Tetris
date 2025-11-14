@@ -21,13 +21,13 @@ interface GameState {
 
   // AI state (single player)
   isAIPlaying: boolean
-  selectedAgent: 'random' | 'dellacherie'
+  selectedAgent: 'random' | 'dellacherie' | 'smartdellacherie'
   playbackSpeed: number
 
   // Comparison mode state
   isComparing: boolean
-  comparisonAgent1: 'random' | 'dellacherie'
-  comparisonAgent2: 'random' | 'dellacherie'
+  comparisonAgent1: 'random' | 'dellacherie' | 'smartdellacherie'
+  comparisonAgent2: 'random' | 'dellacherie' | 'smartdellacherie'
   comparisonSpeed: number
   comparisonMaxPieces: number
   comparisonSeed: number
@@ -42,13 +42,13 @@ interface GameState {
   setConnected: (connected: boolean) => void
   setPaused: (paused: boolean) => void
   setAIPlaying: (playing: boolean) => void
-  setSelectedAgent: (agent: 'random' | 'dellacherie') => void
+  setSelectedAgent: (agent: 'random' | 'dellacherie' | 'smartdellacherie') => void
   setPlaybackSpeed: (speed: number) => void
 
   // Comparison actions
   setComparing: (comparing: boolean) => void
-  setComparisonAgent1: (agent: 'random' | 'dellacherie') => void
-  setComparisonAgent2: (agent: 'random' | 'dellacherie') => void
+  setComparisonAgent1: (agent: 'random' | 'dellacherie' | 'smartdellacherie') => void
+  setComparisonAgent2: (agent: 'random' | 'dellacherie' | 'smartdellacherie') => void
   setComparisonSpeed: (speed: number) => void
   setComparisonMaxPieces: (pieces: number) => void
   setComparisonSeed: (seed: number) => void

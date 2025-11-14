@@ -4,7 +4,7 @@ SRS defines how pieces rotate and what wall kick offsets to try
 when a rotation would otherwise collide.
 """
 
-from typing import List, Tuple, Optional
+from typing import Optional
 from tetris_core.piece import Piece
 from tetris_core.board import Board
 

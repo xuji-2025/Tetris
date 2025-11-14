@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from tetris_core.env import TetrisEnv, FrameAction, PlacementAction
-from tetris_core.agents import RandomAgent, DellacherieAgent
+from tetris_core.agents import RandomAgent, DellacherieAgent, SmartDellacherieAgent
 from api.protocol import (
     MessageType,
     HelloRequest,
@@ -545,6 +545,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             agent = RandomAgent()
                         elif message.agent_type.lower() == "dellacherie":
                             agent = DellacherieAgent()
+                        elif message.agent_type.lower() == "smartdellacherie":
+                            agent = SmartDellacherieAgent()
                         else:
                             error = ErrorResponse(
                                 type="error",
@@ -598,6 +600,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             agent1 = RandomAgent()
                         elif message.agent1.lower() == "dellacherie":
                             agent1 = DellacherieAgent()
+                        elif message.agent1.lower() == "smartdellacherie":
+                            agent1 = SmartDellacherieAgent()
                         else:
                             error = ErrorResponse(
                                 type="error",
@@ -611,6 +615,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             agent2 = RandomAgent()
                         elif message.agent2.lower() == "dellacherie":
                             agent2 = DellacherieAgent()
+                        elif message.agent2.lower() == "smartdellacherie":
+                            agent2 = SmartDellacherieAgent()
                         else:
                             error = ErrorResponse(
                                 type="error",
