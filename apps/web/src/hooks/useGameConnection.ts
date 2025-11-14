@@ -8,11 +8,15 @@ import type {
   ObservationResponse,
   ErrorResponse,
   FrameAction,
+  CompareObsResponse,
+  CompareCompleteResponse,
 } from '../types/protocol'
 
 interface UseGameConnectionProps {
   url: string
   onObservation?: (data: ObservationResponse) => void
+  onCompareObs?: (data: CompareObsResponse) => void
+  onCompareComplete?: (data: CompareCompleteResponse) => void
   onError?: (error: ErrorResponse) => void
   onConnect?: () => void
   onDisconnect?: () => void
@@ -21,6 +25,8 @@ interface UseGameConnectionProps {
 export function useGameConnection({
   url,
   onObservation,
+  onCompareObs,
+  onCompareComplete,
   onError,
   onConnect,
   onDisconnect,
@@ -57,6 +63,10 @@ export function useGameConnection({
           console.log('Server handshake:', message)
         } else if (message.type === 'obs') {
           onObservation?.(message)
+        } else if (message.type === 'compare_obs') {
+          onCompareObs?.(message)
+        } else if (message.type === 'compare_complete') {
+          onCompareComplete?.(message)
         } else if (message.type === 'error') {
           console.error('Server error:', message)
           onError?.(message)
@@ -127,11 +137,87 @@ export function useGameConnection({
     }
   }, [])
 
+  // Start AI play
+  const aiPlay = useCallback((agentType: 'random' | 'dellacherie', speed: number = 1.0, seed?: number) => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
+        JSON.stringify({
+          type: 'ai_play',
+          agent_type: agentType,
+          speed,
+          seed,
+          max_pieces: 1000,
+        })
+      )
+    }
+  }, [])
+
+  // Stop AI play
+  const aiStop = useCallback(() => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
+        JSON.stringify({
+          type: 'ai_stop',
+        })
+      )
+    }
+  }, [])
+
+  // Start comparison mode
+  const compareStart = useCallback((
+    agent1: string,
+    agent2: string,
+    speed: number,
+    maxPieces: number,
+    seed?: number
+  ) => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
+        JSON.stringify({
+          type: 'compare_start',
+          agent1,
+          agent2,
+          speed,
+          max_pieces: maxPieces,
+          seed,
+        })
+      )
+    }
+  }, [])
+
+  // Stop comparison mode
+  const compareStop = useCallback(() => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
+        JSON.stringify({
+          type: 'compare_stop',
+        })
+      )
+    }
+  }, [])
+
+  // Set comparison speed
+  const compareSetSpeed = useCallback((speed: number) => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(
+        JSON.stringify({
+          type: 'compare_set_speed',
+          speed,
+        })
+      )
+    }
+  }, [])
+
   return {
     isConnected,
     connectionError,
     reset,
     step,
     subscribe,
+    aiPlay,
+    aiStop,
+    compareStart,
+    compareStop,
+    compareSetSpeed,
   }
 }

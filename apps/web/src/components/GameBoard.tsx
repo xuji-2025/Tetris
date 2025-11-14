@@ -2,7 +2,7 @@
  * Tetris game board renderer
  */
 
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Board, CurrentPiece, PieceType } from '../types/protocol'
 
 interface GameBoardProps {

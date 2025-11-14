@@ -14,7 +14,7 @@ const KEY_MAP: Record<string, FrameAction> = {
   ArrowLeft: 'LEFT',
   ArrowRight: 'RIGHT',
   ArrowDown: 'SOFT',
-  ArrowUp: 'HARD', // Alternative for hard drop
+  ArrowUp: 'CW', // Arrow up rotates clockwise
   ' ': 'HARD', // Space for hard drop
   z: 'CCW', // Z for counter-clockwise
   Z: 'CCW',

@@ -64,8 +64,10 @@
 /* Header */
 header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
+  width: 100%;
 }
 
 header h1 {
@@ -77,6 +79,50 @@ header h1 {
   background-clip: text;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.ai-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+}
+
+.ai-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.ai-controls select {
+  padding: 0.25rem 0.5rem;
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ai-controls select:hover {
+  border-color: #777;
+}
+
+.ai-controls select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .reset-btn {
   padding: 0.5rem 1.5rem;
   font-size: 1rem;
@@ -86,6 +132,31 @@ header h1 {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.ai-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: #00a000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.ai-btn:hover:not(:disabled) {
+  background: #00c000;
+  transform: translateY(-1px);
+}
+
+.ai-btn.stop {
+  background: #c00000;
+}
+
+.ai-btn.stop:hover {
+  background: #e00000;
 }
 
 .reset-btn:hover:not(:disabled) {
@@ -111,6 +182,7 @@ header h1 {
   flex-direction: column;
   gap: 1rem;
   min-width: 180px;
+  width: 180px;
 }
 
 .board-container {
@@ -141,26 +213,23 @@ header h1 {
 }
 
 /* Piece Preview */
-.piece-preview {
+.piece-preview-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.piece-item {
-  font-size: 1.5rem;
-  font-weight: bold;
-  font-family: monospace;
-  padding: 0.25rem 0.5rem;
+.piece-preview-item {
+  padding: 0.5rem;
   background: #1a1a1a;
   border-radius: 4px;
-  text-align: center;
 }
 
 .empty {
   color: #444;
   text-align: center;
   font-size: 1.5rem;
+  padding: 1rem;
 }
 
 /* Stats */
@@ -209,6 +278,24 @@ header h1 {
 .inspector {
   max-height: 400px;
   overflow-y: auto;
+}
+
+.inspector h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inspector-arrow {
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.inspector-arrow.expanded {
+  transform: rotate(90deg);
 }
 
 .section {
@@ -271,31 +358,27 @@ header h1 {
   background: #c00;
 }
 
-/* Footer */
-footer {
-  margin-top: 2rem;
-  text-align: center;
-  color: #888;
-}
-
-.controls-info h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.2rem;
-  color: #00f0f0;
-}
-
-.controls-grid {
+/* Controls List */
+.controls-list {
   display: flex;
-  gap: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .control {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #333;
+}
+
+/* Footer */
+footer {
+  margin-top: 1rem;
+  text-align: center;
+  color: #888;
 }
 
 kbd {
@@ -319,6 +402,190 @@ kbd {
   font-family: monospace;
 }
 
+/* Mode Toggle */
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
+.mode-btn {
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  background: transparent;
+  color: #888;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.mode-btn:hover {
+  background: #333;
+  color: #aaa;
+}
+
+.mode-btn.active {
+  background: #00f0f0;
+  color: #000;
+  font-weight: bold;
+}
+
+/* Comparison Container */
+.comparison-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1400px;
+}
+
+/* Comparison Stats */
+.comparison-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.stat-box {
+  background: #222;
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  color: #00f0f0;
+  font-weight: bold;
+}
+
+/* Comparison Boards */
+.comparison-boards {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.comparison-game {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comparison-game-header {
+  background: #222;
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.comparison-game-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #00f0f0;
+}
+
+.comparison-game-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.comparison-game-stats .progress {
+  font-weight: bold;
+  color: #00f0f0;
+  font-size: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #333;
+  margin-bottom: 0.5rem;
+}
+
+.topped-out {
+  color: #f00;
+  font-weight: bold;
+  margin-top: 0.5rem;
+}
+
+/* Comparison Complete Overlay */
+.comparison-complete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.comparison-complete {
+  background: #1a1a1a;
+  border: 3px solid #00f0f0;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  min-width: 600px;
+  max-width: 800px;
+  box-shadow: 0 0 30px rgba(0, 240, 240, 0.5);
+}
+
+.comparison-complete h2 {
+  margin: 0 0 1rem 0;
+  font-size: 2rem;
+  color: #00f0f0;
+}
+
+.winner {
+  font-size: 1.8rem;
+  color: #fff;
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
+.final-stats {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.final-stats-column {
+  text-align: left;
+}
+
+.final-stats-column h3 {
+  margin: 0 0 1rem 0;
+  color: #00f0f0;
+  font-size: 1.3rem;
+}
+
+.final-stats-column > div {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+  color: #aaa;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .game-container {
@@ -330,5 +597,15 @@ kbd {
   .right-panel {
     flex-direction: row;
     min-width: auto;
+  }
+
+  .comparison-boards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .final-stats {
+    flex-direction: column;
+    gap: 1.5rem;
   }
 }

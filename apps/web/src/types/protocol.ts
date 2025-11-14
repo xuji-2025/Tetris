@@ -116,6 +116,65 @@ export interface ErrorResponse {
   details?: Record<string, any>
 }
 
-export type ServerMessage = HelloResponse | ObservationResponse | ErrorResponse
+// Comparison Mode
 
-export type ClientMessage = HelloRequest | ResetRequest | StepRequest | SubscribeRequest
+export interface CompareStartRequest {
+  type: 'compare_start'
+  agent1: string // "random" | "dellacherie"
+  agent2: string
+  seed?: number
+  max_pieces: number
+  speed: number
+}
+
+export interface CompareStopRequest {
+  type: 'compare_stop'
+}
+
+export interface CompareSetSpeedRequest {
+  type: 'compare_set_speed'
+  speed: number
+}
+
+export interface GameState {
+  obs: Observation
+  done: boolean
+  pieces_played: number
+  active: boolean // Still playing (not topped out yet)
+}
+
+export interface ComparisonStats {
+  both_done: boolean
+  leader: 'agent1' | 'agent2' | null
+  score_diff: number
+  efficiency_agent1: number // Score per line
+  efficiency_agent2: number
+  avg_clear_agent1: number // Average lines cleared per clear
+  avg_clear_agent2: number
+}
+
+export interface CompareObsResponse {
+  type: 'compare_obs'
+  game1: GameState
+  game2: GameState
+  comparison: ComparisonStats
+}
+
+export interface FinalGameStats {
+  score: number
+  lines: number
+  pieces: number
+  topped_out: boolean
+  efficiency: number
+}
+
+export interface CompareCompleteResponse {
+  type: 'compare_complete'
+  winner: 'agent1' | 'agent2' | null
+  game1: FinalGameStats
+  game2: FinalGameStats
+}
+
+export type ServerMessage = HelloResponse | ObservationResponse | ErrorResponse | CompareObsResponse | CompareCompleteResponse
+
+export type ClientMessage = HelloRequest | ResetRequest | StepRequest | SubscribeRequest | CompareStartRequest | CompareStopRequest | CompareSetSpeedRequest
