@@ -233,7 +233,8 @@ class TetrisEnv:
         # Check if piece is on ground and manage lock delay
         # This must happen after every action, not just gravity
         if action != FrameAction.HARD and self.current_piece:
-            if self.lock_delay.is_on_ground(self.board, self.current_piece):
+            active_piece = self._require_current_piece()
+            if self.lock_delay.is_on_ground(self.board, active_piece):
                 # Piece is on ground
                 if not self.lock_delay.active:
                     self.lock_delay.start()
@@ -246,10 +247,13 @@ class TetrisEnv:
         if self.lock_delay.active:
             if not self.current_piece:
                 self.lock_delay.reset()
-            elif self.lock_delay.is_on_ground(self.board, self.current_piece):
+            elif self.lock_delay.is_on_ground(
+                self.board, self._require_current_piece()
+            ):
                 if self.lock_delay.tick():
                     # Lock the piece
-                    self.board.lock_piece(self.current_piece)
+                    locked_piece = self._require_current_piece()
+                    self.board.lock_piece(locked_piece)
                     events.append("lock")
                     self.lock_delay.reset()
 
@@ -266,7 +270,7 @@ class TetrisEnv:
                     self.hold_used_this_turn = False
 
                     # Check top out
-                    if self.board.collides(self.current_piece):
+                    if self.board.collides(self._require_current_piece()):
                         self.done = True
                         events.append("top_out")
             else:
@@ -306,7 +310,7 @@ class TetrisEnv:
             return StepResult(self._build_observation(), 0.0, True, {"error": "Game over"})
 
         # Save original state in case we need to restore on failure
-        original_piece = self.current_piece
+        original_piece = self._require_current_piece().copy()
         original_hold = self.hold_piece
         original_hold_used = self.hold_used_this_turn
 
@@ -357,8 +361,7 @@ class TetrisEnv:
             events.append("hold")
 
         # Rotate to target rotation
-        target_piece_type = self.current_piece.type
-        current_rot = self.current_piece.rot
+        current_rot = self._require_current_piece().rot
         target_rot = action.rot
 
         # Calculate shortest rotation path
@@ -380,22 +383,22 @@ class TetrisEnv:
 
         # Move to target x position
         target_x = action.x
-        current_x = self.current_piece.x
+        current_x = self._require_current_piece().x
         dx = target_x - current_x
 
         print(f"[step_placement] Moving horizontally: current_x={current_x}, target_x={target_x}, dx={dx}", flush=True)
         if dx != 0:
             direction = 1 if dx > 0 else -1
             for i in range(abs(dx)):
-                print(f"[step_placement] Move step {i+1}/{abs(dx)}: piece.x={self.current_piece.x}, direction={direction}", flush=True)
+                print(f"[step_placement] Move step {i+1}/{abs(dx)}: piece.x={self._require_current_piece().x}, direction={direction}", flush=True)
                 if not self._try_move(direction, 0):
                     # Movement failed - restore state
-                    print(f"[step_placement] Movement FAILED at step {i}: current_x={self.current_piece.x}, target_x={target_x}", flush=True)
+                    print(f"[step_placement] Movement FAILED at step {i}: current_x={self._require_current_piece().x}, target_x={target_x}", flush=True)
                     print(f"[step_placement] RESTORING: original piece was at x={original_piece.x}, rot={original_piece.rot}", flush=True)
                     self.current_piece = original_piece
                     self.hold_piece = original_hold
                     self.hold_used_this_turn = original_hold_used
-                    print(f"[step_placement] RESTORED: current piece now at x={self.current_piece.x}, rot={self.current_piece.rot}", flush=True)
+                    print(f"[step_placement] RESTORED: current piece now at x={self._require_current_piece().x}, rot={self._require_current_piece().rot}", flush=True)
                     return StepResult(
                         self._build_observation(),
                         -100.0,
@@ -434,9 +437,23 @@ class TetrisEnv:
 
     def _spawn_piece(self) -> None:
         """Spawn the next piece."""
-        next_type = self.rng.next()
+        next_type = self._require_rng().next()
         x, y = get_spawn_position(next_type)
         self.current_piece = Piece(next_type, x, y, rot=0)
+
+    def _require_current_piece(self) -> Piece:
+        """Return the active piece or raise if the game has not spawned one yet."""
+        if self.current_piece is None:
+            raise RuntimeError(
+                "Current piece is undefined. Call reset() before stepping the environment."
+            )
+        return self.current_piece
+
+    def _require_rng(self) -> SevenBagRNG:
+        """Return the RNG or raise if reset() was not called."""
+        if self.rng is None:
+            raise RuntimeError("Random generator is undefined. Call reset(seed) first.")
+        return self.rng
 
     def _try_move(self, dx: int, dy: int) -> bool:
         """Try to move the current piece.
@@ -451,7 +468,8 @@ class TetrisEnv:
         if not self.current_piece:
             return False
 
-        new_piece = self.current_piece.move(dx, dy)
+        current_piece = self._require_current_piece()
+        new_piece = current_piece.move(dx, dy)
         if not self.board.collides(new_piece):
             self.current_piece = new_piece
             return True
@@ -469,7 +487,9 @@ class TetrisEnv:
         if not self.current_piece:
             return False
 
-        rotated = self.srs.try_rotate(self.board, self.current_piece, clockwise)
+        rotated = self.srs.try_rotate(
+            self.board, self._require_current_piece(), clockwise
+        )
         if rotated:
             self.current_piece = rotated
             return True
@@ -485,11 +505,15 @@ class TetrisEnv:
             return (0, False)
 
         # Drop down until collision (y=0 is top, y=19 is bottom)
-        while not self.board.collides(self.current_piece.move(0, 1)):
-            self.current_piece = self.current_piece.move(0, 1)
+        while True:
+            active_piece = self._require_current_piece()
+            moved_piece = active_piece.move(0, 1)
+            if self.board.collides(moved_piece):
+                break
+            self.current_piece = moved_piece
 
         # Immediately lock
-        self.board.lock_piece(self.current_piece)
+        self.board.lock_piece(self._require_current_piece())
         lines_cleared = self.board.clear_lines()
         if lines_cleared > 0:
             self.lines_total += lines_cleared
@@ -498,7 +522,7 @@ class TetrisEnv:
         self._spawn_piece()
         self.hold_used_this_turn = False
 
-        if self.board.collides(self.current_piece):
+        if self.board.collides(self._require_current_piece()):
             self.done = True
 
         return (lines_cleared, True)
@@ -514,17 +538,17 @@ class TetrisEnv:
 
         if self.hold_piece is None:
             # First hold
-            self.hold_piece = self.current_piece.type
+            self.hold_piece = self._require_current_piece().type
             self._spawn_piece()
         else:
             # Swap with held piece
             temp = self.hold_piece
-            self.hold_piece = self.current_piece.type
+            self.hold_piece = self._require_current_piece().type
             x, y = get_spawn_position(temp)
             self.current_piece = Piece(temp, x, y, rot=0)
 
         # Check if the spawned piece collides (top out condition)
-        if self.board.collides(self.current_piece):
+        if self.board.collides(self._require_current_piece()):
             self.done = True
 
         self.hold_used_this_turn = True
@@ -543,19 +567,20 @@ class TetrisEnv:
             return []
 
         moves = []
-        pieces_to_try = [self.current_piece.type]
+        active_piece = self._require_current_piece()
+        pieces_to_try = [active_piece.type]
 
         if self.hold_enabled and self.hold_piece and not self.hold_used_this_turn:
             pieces_to_try.append(self.hold_piece)
 
         for piece_type in pieces_to_try:
-            use_hold = piece_type != self.current_piece.type
+            use_hold = piece_type != active_piece.type
 
             if use_hold:
                 spawn_x, spawn_y = get_spawn_position(piece_type)
                 start_piece = Piece(piece_type, spawn_x, spawn_y, rot=0)
             else:
-                start_piece = self.current_piece.copy()
+                start_piece = active_piece.copy()
 
             for target_rot in range(4):
                 shape = PIECE_SHAPES[piece_type][target_rot]
